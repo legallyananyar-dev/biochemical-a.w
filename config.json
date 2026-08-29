@@ -1,0 +1,8 @@
+{
+  "app_settings": { "default_volume_floor": 0.005, "security_threshold": 0.75 },
+  "molecule_presets": [
+    {"name": "Water (H2O)", "formula": "H2O", "risk_level": "Low"},
+    {"name": "Caffeine", "formula": "C8H10N4O2", "risk_level": "Maximum"},
+    {"name": "Aspirin", "formula": "C9H8O4", "risk_level": "High"}
+  ]
+}
