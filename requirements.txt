@@ -1,0 +1,4 @@
+torch
+torchaudio
+flask
+python-dotenv
