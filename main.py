@@ -1,8 +1,12 @@
-import os
-from app import app
+import subprocess
+import sys
 
-if __name__ == '__main__':
-    # Dynamically grab the port Render assigns, or default to 5000
-    port = int(os.environ.get("PORT", 5000))
-    # host='0.0.0.0' allows external incoming internet traffic to hit your Web UI interface
-    app.run(host='0.0.0.0', port=port, debug=False)
+# Automatically run the correct fast CPU download inside Render's operating container
+try:
+    import torch
+    import torchaudio
+    print("✅ PyTorch environment verified successfully.")
+except ImportError:
+    print("📥 Core machine learning packages missing. Executing secure pipeline wheel download...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://pytorch.org"])
+    print("✅ Core architecture libraries dynamically linked.")
