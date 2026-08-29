@@ -2,5 +2,6 @@ services:
   - type: web
     name: biochemical-acoustic-watermarking
     env: python
-    buildCommand: pip install -r requirements.txt
+    pythonVersion: 3.11.9
+    buildCommand: pip install torch torchaudio --index-url https://pytorch.org && pip install -r requirements.txt
     startCommand: python main.py
