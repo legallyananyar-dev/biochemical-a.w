@@ -1,35 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAW // Security Control Panel</title>
-    <style>
-        body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; padding: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background: #161b22; padding: 25px; border-radius: 8px; border: 1px solid #30363d; }
-        h1 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-top: 0; }
-        label { display: block; margin: 15px 0 5px; font-weight: bold; }
-        select, button { width: 100%; padding: 12px; background: #21262d; border: 1px solid #30363d; color: white; border-radius: 6px; box-sizing: border-box; }
-        button { background: #238636; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
-        button:hover { background: #2ea043; }
-        .log-box { margin-top: 25px; background: #010409; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px; color: #7ee787; border: 1px solid #30363d; height: 120px; overflow-y: auto; white-space: pre-line; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h1>🧬 BAW Colab Control Center</h1>
-    <p>Biochemical Acoustic Watermarking Deployment Portal</p>
-    
-    <label for="moleculeSelect">Select Cryptographic Chemical Key</label>
-    <select id="moleculeSelect"></select>
-
-    <button onclick="runProtectionEngine()">🔒 Inject Molecular Packet</button>
-
-    <label>System Live Monitoring Logs</label>
-    <div class="log-box" id="terminalLogs">[System Idle] Waiting for deployment inputs...</div>
-</div>
-
 <script>
+    // Dynamically load settings from config JSON file
     fetch('/static/config.json')
         .then(res => res.json())
         .then(data => {
@@ -45,13 +15,37 @@
     function runProtectionEngine() {
         const logger = document.getElementById('terminalLogs');
         const molecule = document.getElementById('moleculeSelect').value;
-        logger.innerHTML = `[PROCESS] Extracting descriptors for key: ${molecule}...\n`;
-        setTimeout(() => {
-            logger.innerHTML += `[SUCCESS] Tensor Packet mapping completed.\n`;
-            logger.innerHTML += `[ACTIVE] Embedding high-frequency audio steganography tripwire...\n`;
-            logger.innerHTML += `[SECURE] Voice file fully locked against AI isolation scraping.\n`;
-        }, 1000);
+        const fileInput = document.getElementById('audioFile');
+
+        if (fileInput.files.length === 0) {
+            logger.innerHTML = `❌ ERROR: Please upload a target voice audio track first.`;
+            return;
+        }
+
+        logger.innerHTML = `[PROCESS] Extracting chemical descriptors for: ${molecule}...\n`;
+        
+        // Pack data into a real network payload form
+        const formData = new FormData();
+        formData.append('audio', fileInput.files[0]);
+        formData.append('molecule', molecule);
+
+        // Send payload to Python Flask Server
+        fetch('/api/protect', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === "success") {
+                logger.innerHTML += `[SUCCESS] Tensor Packet mapping completed.\n`;
+                logger.innerHTML += `[ACTIVE] Steganography lock verified via Transformer Sentinel: ${data.integrity_rating}\n`;
+                logger.innerHTML += `[SECURE] Voice file fully locked against AI isolation scraping.\n`;
+            } else {
+                logger.innerHTML += `❌ PIPELINE ERROR: ${data.msg}\n`;
+            }
+        })
+        .catch(err => {
+            logger.innerHTML += `❌ SERVER SYSTEM DISCONNECT: ${err}\n`;
+        });
     }
 </script>
-</body>
-</html>
