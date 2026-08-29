@@ -1,5 +1,2 @@
---index-url https://pytorch.org
-torch
-torchaudio
 flask
 python-dotenv
