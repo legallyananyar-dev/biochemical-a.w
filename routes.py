@@ -1,50 +1,50 @@
 import os
 from flask import render_template, jsonify, request
 from app import app
-import torch
 
-# Import the core PyTorch modules we built
 from baw_core.parser import ChemistryMusicParser
 from baw_core.embedder import BiochemicalEmbedder
 from baw_core.detector import BiochemicalTransformerDetector
 
-# Initialize the framework tools
 parser = ChemistryMusicParser()
 embedder = BiochemicalEmbedder()
 detector = BiochemicalTransformerDetector()
 
+SEQUENCE_LENGTH = 50  # time steps per audio clip; must match on embed AND verify
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
 @app.route('/api/protect', methods=['POST'])
 def protect_voice():
-    # 1. Grab parameters from the web frontend form
-    molecule_formula = request.form.get('molecule', 'H2O')
-    
-    # 2. Check if an audio file was uploaded
+    molecule = request.form.get('molecule', 'H2O')
+
     if 'audio' not in request.files:
-        return jsonify({"status": "error", "msg": "No audio file uploaded to server."}), 400
-        
+        return jsonify({"status": "error", "msg": "No audio file uploaded."}), 400
+
     audio_file = request.files['audio']
     if audio_file.filename == '':
-        return jsonify({"status": "error", "msg": "Empty audio file boundary."}), 400
+        return jsonify({"status": "error", "msg": "Empty audio file."}), 400
 
-    # Save incoming raw file temporarily
     temp_input = "temp_raw_voice.wav"
     temp_output = "protected_voice_output.wav"
     audio_file.save(temp_input)
 
     try:
-        # 3. Step 1 of your Architecture: Create the PyTorch [1, Steps, 4] Molecule Tensor
-        # Simple dynamic translation recipe mapping parsing tokens
-        recipe = [(char, 'single', 'R') for char in molecule_formula if char.isalpha()]
-        molecule_tensor = parser.create_molecular_packet(recipe, sequence_length=50)
+        # Build the [1, T, 4] tensor: [pitch, volume, bond_dissonance, chirality]
+        packet = parser.build_packet(temp_input, molecule, sequence_length=SEQUENCE_LENGTH)
 
-        # 4. Step 2 of your Architecture: Embed the tensor into the physical sound wave
-        embedder.embed_signature(temp_input, temp_output, molecule_tensor)
+        # Embed it into the waveform as near-inaudible carrier signals
+        embedder.embed_signature(temp_input, temp_output, packet)
 
-        # 5. Step 3 of your Architecture: Run validation via the Transformer Sentinel
-        # We simulate the validation tracking matrix check by forwarding our packet array
-        integrity_score = detector.verify_audio_integrity(molecule_tensor)
+        # Integrity score right after embedding should be high -- this is
+        # a sanity check, not yet the "was this file tampered with" check
+        # (see /api/verify for that; and remember detector.py is untrained)
+        integrity_score = detector.verify_audio_integrity(packet)
 
-        # Clean up input temporary file cache
         if os.path.exists(temp_input):
             os.remove(temp_input)
 
@@ -52,8 +52,40 @@ def protect_voice():
             "status": "success",
             "msg": "Biochemical watermark structural lock engaged.",
             "integrity_rating": f"{integrity_score * 100:.2f}%",
-            "download_url": f"/{temp_output}"
+            "download_url": f"/{temp_output}",
         })
 
     except Exception as e:
         return jsonify({"status": "error", "msg": f"Execution pipeline error: {str(e)}"}), 500
+
+
+@app.route('/api/verify', methods=['POST'])
+def verify_voice():
+    """
+    Verify-time flow: given a (possibly tampered) audio file, RE-EXTRACT
+    the packet from the waveform itself (not the original tensor) and
+    score it. This is the actual clone/tamper check -- distinct from the
+    sanity-check score returned by /api/protect.
+    """
+    if 'audio' not in request.files:
+        return jsonify({"status": "error", "msg": "No audio file uploaded."}), 400
+
+    audio_file = request.files['audio']
+    temp_path = "temp_verify_voice.wav"
+    audio_file.save(temp_path)
+
+    try:
+        recovered_packet = embedder.extract_signature(temp_path, sequence_length=SEQUENCE_LENGTH)
+        integrity_score = detector.verify_audio_integrity(recovered_packet)
+
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+        return jsonify({
+            "status": "success",
+            "integrity_rating": f"{integrity_score * 100:.2f}%",
+            "note": "detector.py is untrained -- this score is not yet meaningful.",
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "msg": f"Verification pipeline error: {str(e)}"}), 500

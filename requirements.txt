@@ -1,2 +1,8 @@
 flask
 python-dotenv
+torch
+rdkit
+librosa
+scipy
+soundfile
+numpy
