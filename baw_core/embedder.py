@@ -36,8 +36,14 @@ CAVEATS:
 
 import numpy as np
 import torch
-import torchaudio
+import soundfile as sf
 from scipy.signal import butter, filtfilt
+
+# NOTE: recent torchaudio versions removed their built-in audio I/O backend
+# (they now delegate to a separate `torchcodec` package). Rather than add
+# that dependency, this file uses `soundfile` for reading/writing audio --
+# it's already installed as a librosa dependency -- and keeps torch purely
+# for the tensor math.
 
 CARRIER_BASE_HZ = 18000
 CARRIER_SPACING_HZ = 500
@@ -48,8 +54,10 @@ class BiochemicalEmbedder:
         self.amplitude = amplitude  # relative to the audio's own peak amplitude
 
     def embed_signature(self, input_path: str, output_path: str, packet: torch.Tensor):
-        waveform, sr = torchaudio.load(input_path)  # [channels, samples]
-        waveform = waveform.mean(dim=0)              # mix down to mono
+        audio, sr = sf.read(input_path, always_2d=False)
+        if audio.ndim > 1:
+            audio = audio.mean(axis=1)  # mix down to mono
+        waveform = torch.tensor(audio, dtype=torch.float32)
 
         packet = packet.squeeze(0)  # [T, 4]
         T, n_features = packet.shape
@@ -74,15 +82,17 @@ class BiochemicalEmbedder:
         watermark = watermark * self.amplitude * peak
 
         watermarked = (waveform + watermark).clamp(-1.0, 1.0)
-        torchaudio.save(output_path, watermarked.unsqueeze(0), sr)
+        sf.write(output_path, watermarked.numpy(), sr)
 
     def extract_signature(self, audio_path: str, sequence_length: int, n_features: int = 4) -> torch.Tensor:
         """
         Reverse of embed_signature: recovers an approximate [1, T, 4]
         packet from a (possibly tampered) audio file, for verify-time use.
         """
-        waveform, sr = torchaudio.load(audio_path)
-        waveform = waveform.mean(dim=0).numpy()
+        audio, sr = sf.read(audio_path, always_2d=False)
+        if audio.ndim > 1:
+            audio = audio.mean(axis=1)
+        waveform = audio.astype(np.float32)
         T = sequence_length
         samples_per_step = max(1, len(waveform) // T)
 
