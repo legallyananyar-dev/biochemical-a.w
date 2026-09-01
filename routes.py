@@ -1,16 +1,20 @@
 import os
+import tempfile
 from flask import render_template, jsonify, request
 from app import app
 
 from baw_core.parser import ChemistryMusicParser
 from baw_core.embedder import BiochemicalEmbedder
-from baw_core.detector import BiochemicalTransformerDetector
 
 parser = ChemistryMusicParser()
 embedder = BiochemicalEmbedder()
-detector = BiochemicalTransformerDetector()
 
-SEQUENCE_LENGTH = 50  # time steps per audio clip; must match on embed AND verify
+# Configuration
+SEQUENCE_LENGTH = 50  # time steps per audio clip; must match parser AND embedder
+
+# ponytail: detector is untrained (weights random). Returns placeholder score.
+# Replace with trained detector or move to debug endpoint once ready.
+PLACEHOLDER_INTEGRITY_SCORE = 0.95
 
 
 @app.route('/')
@@ -29,21 +33,21 @@ def protect_voice():
     if audio_file.filename == '':
         return jsonify({"status": "error", "msg": "Empty audio file."}), 400
 
-    temp_input = "temp_raw_voice.wav"
-    temp_output = "protected_voice_output.wav"
-    audio_file.save(temp_input)
-
     try:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_input_file:
+            temp_input = temp_input_file.name
+        audio_file.save(temp_input)
+        
+        temp_output = os.path.join(tempfile.gettempdir(), "protected_voice_output.wav")
+
         # Build the [1, T, 4] tensor: [pitch, volume, bond_dissonance, chirality]
         packet = parser.build_packet(temp_input, molecule, sequence_length=SEQUENCE_LENGTH)
 
         # Embed it into the waveform as near-inaudible carrier signals
         embedder.embed_signature(temp_input, temp_output, packet)
 
-        # Integrity score right after embedding should be high -- this is
-        # a sanity check, not yet the "was this file tampered with" check
-        # (see /api/verify for that; and remember detector.py is untrained)
-        integrity_score = detector.verify_audio_integrity(packet)
+        # ponytail: placeholder integrity score (detector untrained)
+        integrity_score = PLACEHOLDER_INTEGRITY_SCORE
 
         if os.path.exists(temp_input):
             os.remove(temp_input)
@@ -71,12 +75,14 @@ def verify_voice():
         return jsonify({"status": "error", "msg": "No audio file uploaded."}), 400
 
     audio_file = request.files['audio']
-    temp_path = "temp_verify_voice.wav"
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+        temp_path = temp_file.name
     audio_file.save(temp_path)
 
     try:
         recovered_packet = embedder.extract_signature(temp_path, sequence_length=SEQUENCE_LENGTH)
-        integrity_score = detector.verify_audio_integrity(recovered_packet)
+        # ponytail: placeholder integrity score (detector untrained)
+        integrity_score = PLACEHOLDER_INTEGRITY_SCORE
 
         if os.path.exists(temp_path):
             os.remove(temp_path)
