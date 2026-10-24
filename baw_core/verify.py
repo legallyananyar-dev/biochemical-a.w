@@ -39,9 +39,10 @@ def score_packet(recovered: np.ndarray, expected: np.ndarray):
     return (float(np.mean(scores)) if scores else 0.0), tracks
 
 
-def verify_audio(embedder, y, sr, molecule: str, n_steps: int):
+def verify_audio(embedder, y, sr, molecule: str, n_steps: int, raw=None):
     """-> dict(score, shape, level, tracks, expected, recovered) for one candidate molecule."""
-    raw = embedder.extract_raw(y, sr, n_steps)
+    if raw is None:
+        raw = embedder.extract_raw(y, sr, n_steps)
     recovered = embedder.normalize(raw)
     expected = build_packet(y, sr, molecule, n_steps)
     shape, tracks = score_packet(recovered, expected)

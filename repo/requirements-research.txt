@@ -1,4 +1,0 @@
-# Full research environment (notebook + baw_core/detector.py). NOT used by the Vercel deploy.
--r requirements.txt
-torch
-librosa

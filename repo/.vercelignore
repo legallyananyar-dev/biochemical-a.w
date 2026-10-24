@@ -1,8 +1,0 @@
-__pycache__/
-.git/
-.env
-*.ipynb
-root/
-tests/
-requirements-research.txt
-baw_core/detector.py
