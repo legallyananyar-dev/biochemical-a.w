@@ -46,3 +46,6 @@ protected_*.wav
 # System
 .DS_Store
 *.log
+
+# Vercel
+.vercel/
