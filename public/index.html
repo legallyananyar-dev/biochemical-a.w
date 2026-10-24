@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biochemical Acoustic Watermarking</title>
+<meta name="description" content="Lock a molecule's geometry into your voice recording as an inaudible watermark, then check whether it survived.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%235B3DF5'/%3E%3Cpath d='M7 17h4l3-8 4 14 3-6h4' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Biochemical Acoustic Watermarking</h1>
+  <p>Your voice, signed with the shape of a molecule. The signature sits above 18&nbsp;kHz, where you can't hear it, and breaks when something tries to clean it out.</p>
+</header>
+
+<main>
+  <section class="panel" aria-label="Controls">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-protect" aria-selected="true" data-mode="protect">Protect a recording</button>
+      <button role="tab" id="tab-verify" aria-selected="false" data-mode="verify">Check a recording</button>
+    </div>
+
+    <label for="molecule" id="molLabel">Molecule</label>
+    <select id="molecule"></select>
+    <input id="smiles" class="mono" type="text" maxlength="200" placeholder="Paste a SMILES string, e.g. CCO" hidden aria-label="SMILES string">
+
+    <label for="audio">Voice recording</label>
+    <div id="drop" class="drop" tabindex="0">
+      <input id="audio" type="file" accept="audio/*,.wav,.flac,.ogg,.mp3">
+      <span id="dropText">Drop a file here or click to choose. WAV, FLAC, OGG or MP3, up to <span id="maxMb">4</span>&nbsp;MB.</span>
+    </div>
+
+    <button id="run" class="run" type="button">Protect recording</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="stage" aria-label="Result">
+    <div id="verdict" class="verdict" hidden>
+      <div class="big"><span id="pct">0</span><small>%</small></div>
+      <div>
+        <h2 id="vTitle"></h2>
+        <p id="vText"></p>
+      </div>
+    </div>
+
+    <div class="lanes">
+      <canvas id="plot" role="img" aria-label="Four tracks of the signature: pitch, volume, bond dissonance and chirality"></canvas>
+      <p class="legend"><i class="k"></i> what the molecule and voice say the signature should be <i class="r"></i> what was found in the file</p>
+    </div>
+
+    <ul id="tracks" class="tracks" hidden></ul>
+
+    <div id="out" class="out" hidden>
+      <audio id="player" controls></audio>
+      <a id="download" class="dl" download>Download protected file</a>
+    </div>
+  </section>
+</main>
+
+<footer>Research prototype. The v1 watermark is amplitude-based and does not survive MP3 compression or resampling. That fragility is what the check looks for.</footer>
+<script src="/app.js"></script>
+</body>
+</html>
