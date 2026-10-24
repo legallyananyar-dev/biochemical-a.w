@@ -57,9 +57,8 @@ async function run() {
   try {
     const res = await fetch("/api/" + mode, { method: "POST", body: fd });
     if (!res.ok) {
-      let msg = `Server returned ${res.status}.`;
-      try { msg = (await res.json()).msg || msg; } catch {}
-      if (res.status === 413) msg = `That file is too large for the hosted demo (limit ${cfg.max_upload_mb} MB).`;
+      let msg = res.status === 413 ? `That file is too large for the hosted demo (limit ${cfg.max_upload_mb} MB).` : `Server returned ${res.status}.`;
+      try { msg = (await res.json()).msg || msg; } catch {}  // prefer the server's own explanation
       return say(msg, true);
     }
     if (mode === "protect") {
