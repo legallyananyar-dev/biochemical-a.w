@@ -14,8 +14,9 @@ from baw_core.verify import verify_audio
 
 SEQUENCE_LENGTH = int(os.environ.get("SEQUENCE_LENGTH", 50))
 SECURITY_THRESHOLD = float(os.environ.get("SECURITY_THRESHOLD", 0.75))
-MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", 4))        # Vercel rejects request bodies > 4.5 MB
-MAX_OUT_BYTES = int(4.2 * 1024 * 1024)                           # ...and responses > 4.5 MB
+MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", 4))        # Vercel rejects request bodies > 4.5 MB (responses are streamed, so no cap)
+MAX_SECONDS = float(os.environ.get("MAX_SECONDS", 180))         # bounds memory/time per request
+CHUNK = 64 * 1024
 embedder = BiochemicalEmbedder()
 
 
@@ -103,9 +104,8 @@ def _report(res):
 def protect():
     molecule = _molecule(request.form.get("molecule"))
     name, y, sr = _read_audio()
-    if len(y) * 2 + 44 > MAX_OUT_BYTES:
-        raise ApiError(f"Clip too long for the hosted demo ({len(y) / sr:.0f}s). Use up to "
-                       f"{int(MAX_OUT_BYTES / (sr * 2))}s at {sr / 1000:g} kHz.", 413)
+    if len(y) / sr > MAX_SECONDS:
+        raise ApiError(f"Clip is {len(y) / sr:.0f}s long. The hosted demo handles up to {MAX_SECONDS:.0f}s; trim it and try again.", 413)
     try:
         packet = build_packet(y, sr, molecule, SEQUENCE_LENGTH)
         wav = to_wav_bytes(embedder.embed(y, sr, packet), sr)
@@ -114,7 +114,7 @@ def protect():
     except ValueError as e:
         raise ApiError(str(e), 422)
     report.update(molecule=molecule, sample_rate=sr, seconds=round(len(y) / sr, 2))
-    return Response(wav, mimetype="audio/wav", headers={
+    return Response((wav[i:i + CHUNK] for i in range(0, len(wav), CHUNK)), mimetype="audio/wav", headers={
         "Content-Disposition": f'attachment; filename="baw_{name}.wav"',
         "X-BAW-Result": json.dumps(report, separators=(",", ":")),
     })
@@ -127,7 +127,8 @@ def verify():
     _, y, sr = _read_audio()
     candidates = list(PRESETS) if choice == "auto" else [_molecule(choice)]
     try:
-        results = sorted(((m, verify_audio(embedder, y, sr, m, SEQUENCE_LENGTH)) for m in candidates),
+        raw = embedder.extract_raw(y, sr, SEQUENCE_LENGTH)  # carriers are the same for every candidate
+        results = sorted(((m, verify_audio(embedder, y, sr, m, SEQUENCE_LENGTH, raw)) for m in candidates),
                          key=lambda kv: kv[1]["score"], reverse=True)
     except ValueError as e:
         raise ApiError(str(e), 422)

@@ -8,6 +8,7 @@
   :root{--paper:#14102B;--panel:#1D1840;--ink:#EEEBFA;--mute:#A29CC4;--line:#352E66;--uv:#8D75FF;--uv-soft:#2B2360;--pass:#3DD0B8;--warn:#FF7A5F}
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 .top,main,footer{max-width:1120px;margin:0 auto;padding:0 20px}
 .top{padding-top:44px;padding-bottom:28px}

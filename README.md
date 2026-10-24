@@ -22,7 +22,7 @@ python tests/selfcheck.py
 
 Layout: `app.py` (Flask entrypoint) / `routes.py` (`/api/config`, `/api/key`, `/api/protect`, `/api/verify`) / `public/` (UI, served by the CDN) / `baw_core/` (signal + chemistry code) / `vercel.json`.
 
-**Hosted-demo limits:** uploads up to 4 MB and clips up to about 49 s (Vercel caps request and response bodies at 4.5 MB). For longer audio, move uploads to Vercel Blob.
+**Hosted-demo limits:** uploads up to 4 MB (Vercel's request-body cap is 4.5 MB; for bigger files use Vercel Blob client uploads) and clips up to 180 s (`MAX_SECONDS`). The protected WAV is streamed back, so the response size is not capped.
 
 **Deploy dependencies are slim on purpose.** `requirements.txt` has no torch or librosa (too big for a function). `baw_core/detector.py`, the notebook and `requirements-research.txt` are research-only and excluded from the deploy.
 
